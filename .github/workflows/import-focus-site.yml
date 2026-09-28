@@ -34,7 +34,7 @@ jobs:
                    '</div>')
           css = '.focus-banners{display:grid;gap:16px;width:100%;align-self:center}.focus-banners a{display:block;overflow:hidden;border-radius:18px;background:#f5f7fb;box-shadow:0 12px 28px rgba(8,27,54,.13);transition:transform .2s,box-shadow .2s}.focus-banners a:hover,.focus-banners a:focus-visible{transform:translateY(-3px);box-shadow:0 18px 34px rgba(8,27,54,.2)}.focus-banners a:focus-visible{outline:3px solid #1769ff;outline-offset:3px}.focus-banners img{display:block;width:100%;height:auto}'
           if 'class="focus-banners"' not in html:
-              html, count = re.subn(r'<a class="focus-ai-preview"\b[^>]*>\s*<img\b[^>]*>\s*</a>', cards, html, count=1, flags=re.S)
+              html, count = re.subn(r'<a class="focus-ai-preview"[^>]*>\s*<img[^>]*>\s*</a>', cards, html, count=1, flags=re.S)
               if count != 1:
                   raise SystemExit('Existing preview not found; no homepage update')
           if css not in html:
