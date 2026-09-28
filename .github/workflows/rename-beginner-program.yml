@@ -1,0 +1,42 @@
+name: Update beginner program wording
+on:
+  push:
+    paths:
+      - '.github/workflows/rename-beginner-program.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-wording:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Change first program card and dialog text
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          changes = [
+              ('예비 고1<br>기초 퍼포먼스반', '예비 고1<br>입시 기초설계반'),
+              ('바른 움직임과 기초체력을 만들며 실기 종목의 잠재력을 발견하는 시작 과정입니다.', '학생부종합전형을 포함한 수시 및 정시 전형 지원 초기 전략과 기초체력을 만드는 시작 과정입니다.'),
+              ('예비 고1 기초 퍼포먼스반 상세 보기', '예비 고1 입시 기초설계반 상세 보기'),
+              ("title:'예비 고1 · 기초 퍼포먼스반'", "title:'예비 고1 · 입시 기초설계반'"),
+              ("lead:'바른 움직임과 기초체력을 다지며 실기 종목을 준비하는 과정입니다.'", "lead:'학생부종합전형을 포함한 수시 및 정시 전형 지원 초기 전략과 기초체력을 만드는 시작 과정입니다.'"),
+              ("items:['현재 체력과 기본 움직임 점검','기초체력과 바른 동작 중심 훈련','기록 변화 확인과 다음 목표 설정']", "items:['학생부종합전형을 포함한 수시 지원 초기 전략','정시 전형 지원 초기 전략','기초체력 형성']")
+          ]
+          for old, new in changes:
+              if html.count(old) != 1:
+                  raise SystemExit('Expected exactly one occurrence: ' + old)
+              html = html.replace(old, new, 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit text update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: rename beginner program and update admission focus'
+            git push origin HEAD:main
+          fi
