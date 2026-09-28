@@ -1,0 +1,36 @@
+name: Stack data section images
+on:
+  push:
+    paths:
+      - '.github/workflows/stack-data-images.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  stack-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Stack two data images beside lead card
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          images = '<figure class="result-visual"><img src="./datapic_01.png" alt="학생 데이터 안내 이미지 1" loading="lazy" decoding="async"></figure><figure class="result-visual"><img src="./datapic_02.png" alt="학생 데이터 안내 이미지 2" loading="lazy" decoding="async"></figure>'
+          if html.count(images) != 1 or html.count('</style>') != 1 or 'result-image-stack' in html:
+              raise SystemExit('Expected two images or CSS insertion point not found exactly once')
+          html = html.replace(images, '<div class="result-image-stack">' + images + '</div>', 1)
+          css = '#result .result-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);gap:clamp(24px,4vw,60px);align-items:start}#result .result-grid>.result{height:auto;min-height:0}#result .result-image-stack{display:grid;gap:24px;min-width:0}#result .result-visual{display:block;min-height:0;height:auto;aspect-ratio:auto;margin:0;overflow:visible;border-radius:0;background:transparent}#result .result-visual img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}@media(max-width:780px){#result .result-grid{grid-template-columns:1fr;gap:24px}#result .result-image-stack{gap:18px}}'
+          html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit layout
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'style: stack data images without gray boxes'
+            git push origin HEAD:main
+          fi
