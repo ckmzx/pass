@@ -1,0 +1,47 @@
+name: Add Naver consultation reservation button
+on:
+  push:
+    paths:
+      - '.github/workflows/add-naver-consult.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-homepage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add reservation button above phone consultation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          start = html.find('<section class="consult"')
+          end = html.find('</section>', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Consultation section not found; homepage unchanged')
+          section = html[start:end]
+          if 'class="button naver-cta"' not in section:
+              phone = re.search(r'<a class="button" href="tel:[^"]+"[^>]*>.*?</a>', section, re.S)
+              if phone is None:
+                  raise SystemExit('Existing phone button not found; homepage unchanged')
+              naver = '<a class="button naver-cta" href="https://naver.me/5ZJnyauB" target="_blank" rel="noopener noreferrer">네이버 상담 예약</a>'
+              buttons = '<div class="consult-actions">' + naver + phone.group() + '</div>'
+              section = section[:phone.start()] + buttons + section[phone.end():]
+              html = html[:start] + section + html[end:]
+          css = '.consult .consult-actions{display:flex;flex-direction:column;gap:12px;min-width:290px}.consult .consult-actions .button{display:flex;align-items:center;justify-content:center;width:100%;margin:0;min-height:52px;white-space:normal;text-align:center;line-height:1.4}.consult .consult-actions .naver-cta{background:#03c75a;color:#fff}@media(max-width:780px){.consult .consult-actions{width:100%;min-width:0;margin-top:28px}.consult .consult-actions .button{margin:0}}'
+          if css not in html:
+              html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit homepage change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: add Naver consultation reservation above phone button'
+            git push origin HEAD:main
+          fi
