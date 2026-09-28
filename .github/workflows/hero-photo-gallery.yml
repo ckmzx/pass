@@ -22,20 +22,11 @@ jobs:
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
           pattern = r'<div class="hero-side">.*?<div class="hero-tag">MAKE YOUR RECORD</div></div>'
-          gallery = '''<div class="hero-side hero-gallery" aria-label="인천송도센터 학원 사진 슬라이드"><div class="hero-photo hero-photo--one"><img src="./top_1.jpg" alt="인천송도센터 학원 사진 1" loading="eager" decoding="async"></div><div class="hero-photo hero-photo--two"><img src="./top_2.jpg" alt="인천송도센터 학원 사진 2" loading="eager" decoding="async"></div></div>'''
+          gallery = '<div class="hero-side hero-gallery" aria-label="인천송도센터 학원 사진 슬라이드"><div class="hero-photo hero-photo--one"><img src="./top_1.jpg" alt="인천송도센터 학원 사진 1" loading="eager" decoding="async"></div><div class="hero-photo hero-photo--two"><img src="./top_2.jpg" alt="인천송도센터 학원 사진 2" loading="eager" decoding="async"></div></div>'
           html, count = re.subn(pattern, gallery, html, count=1, flags=re.S)
           if count != 1 or html.count('</style>') != 1 or html.count('</body>') != 1:
-              raise SystemExit('Hero markup or style/script insertion point not found exactly once')
-          css = '''
-    .hero-gallery{position:relative;height:480px;isolation:isolate}
-    .hero-photo{position:absolute;width:63%;height:57%;overflow:hidden;border-radius:10px;background:#142a51;border:4px solid rgba(255,255,255,.78);box-shadow:0 22px 44px rgba(3,12,32,.3)}
-    .hero-photo--one{top:0;right:0;z-index:2}
-    .hero-photo--two{bottom:0;left:0;z-index:1}
-    .hero-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;transition:opacity .35s ease}
-    .hero-photo img.is-changing{opacity:0}
-    @media(max-width:800px){.hero-gallery{height:clamp(270px,72vw,400px)}.hero-photo{width:66%;height:65%}}
-    @media(prefers-reduced-motion:reduce){.hero-photo img{transition:none}}
-    '''
+              raise SystemExit('Hero markup or insertion point not found exactly once')
+          css = '.hero-gallery{position:relative;height:480px;isolation:isolate}.hero-photo{position:absolute;width:63%;height:57%;overflow:hidden;border-radius:10px;background:#142a51;border:4px solid rgba(255,255,255,.78);box-shadow:0 22px 44px rgba(3,12,32,.3)}.hero-photo--one{top:0;right:0;z-index:2}.hero-photo--two{bottom:0;left:0;z-index:1}.hero-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;transition:opacity .35s ease}.hero-photo img.is-changing{opacity:0}@media(max-width:800px){.hero-gallery{height:clamp(270px,72vw,400px)}.hero-photo{width:66%;height:65%}}@media(prefers-reduced-motion:reduce){.hero-photo img{transition:none}}'
           js = '''<script>(function(){const images=[...document.querySelectorAll('.hero-gallery img')];if(images.length!==2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;const photos=[1,2,3,4,5].map(n=>'./top_'+n+'.jpg');let next=2,slot=0;photos.slice(2).forEach(src=>{const preload=new Image();preload.src=src});window.setInterval(()=>{if(document.hidden)return;const image=images[slot],index=next,preload=new Image();preload.onload=()=>{image.classList.add('is-changing');window.setTimeout(()=>{image.onload=()=>image.classList.remove('is-changing');image.onerror=()=>image.classList.remove('is-changing');image.alt='인천송도센터 학원 사진 '+(index+1);image.src=photos[index]},360)};preload.src=photos[index];slot=(slot+1)%2;next=(next+1)%photos.length},4600)})();</script>'''
           html = html.replace('</style>', css + '</style>', 1).replace('</body>', js + '</body>', 1)
           p.write_text(html, encoding='utf-8')
