@@ -1,0 +1,57 @@
+name: Import Focus Motion AI site
+on:
+  push:
+    paths:
+      - '.github/workflows/import-focus-site.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/checkout@v4
+        with:
+          repository: ckmzx/focus-motion-ai
+          ref: main
+          path: source-focus
+          persist-credentials: false
+      - name: Copy static site and replace preview
+        run: |
+          mkdir -p focus-motion-ai
+          rsync -a --delete --exclude='.git/' source-focus/ focus-motion-ai/
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          if 'class="focus-ai-preview"' not in html:
+              start = html.find('<div class="visual">')
+              if start < 0:
+                  raise SystemExit('Preview visual block not found; homepage left unchanged')
+              depth = 0
+              end = None
+              for match in re.finditer(r'</?div\b[^>]*>', html[start:], re.I):
+                  token = match.group()
+                  depth += -1 if token.startswith('</') else 1
+                  if depth == 0:
+                      end = start + match.end()
+                      break
+              if end is None:
+                  raise SystemExit('Preview visual block not closed; homepage left unchanged')
+              card = '<a class="focus-ai-preview" href="./focus-motion-ai/" aria-label="Focus Motion AI 사이트 보기" style="display:block;width:100%;align-self:center"><img src="./pass_ai_info.png" alt="Focus Motion AI 실기 분석 소개" style="display:block;width:100%;height:auto"></a>'
+              p.write_text(html[:start] + card + html[end:], encoding='utf-8')
+          Path('.nojekyll').touch()
+          PY
+      - name: Commit imported page
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html focus-motion-ai .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: add Focus Motion AI page under pass site'
+            git push origin HEAD:main
+          fi
