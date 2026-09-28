@@ -1,0 +1,37 @@
+name: Add social navigation links
+on:
+  push:
+    paths:
+      - '.github/workflows/add-social-nav.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  add-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add blog and Instagram menu items
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          old = '<a href="#result">온라인 관리</a></nav>'
+          new = '<a href="#result">온라인 관리</a><a href="https://blog.naver.com/passincheon" target="_blank" rel="noopener noreferrer">블로그</a><a href="https://www.instagram.com/pass_incheon/" target="_blank" rel="noopener noreferrer">인스타그램</a></nav>'
+          if html.count(old) != 1 or html.count('</style>') != 1:
+              raise SystemExit('Expected navigation or stylesheet not found exactly once')
+          html = html.replace(old, new, 1)
+          css = '.nav-links{gap:clamp(12px,1.6vw,28px)}.nav-links a{white-space:nowrap}@media(min-width:781px) and (max-width:1100px){.nav{position:relative}.nav-links,.nav-cta{display:none}.menu{display:block;position:relative;z-index:31}.nav-links.open{display:flex;position:absolute;top:67px;left:0;right:0;padding:18px 20px 22px;flex-direction:column;gap:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 14px 24px rgba(8,27,54,.12);z-index:30}.nav-links.open a{padding:14px 20px}}'
+          html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit navigation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: add blog and Instagram menu items'
+            git push origin HEAD:main
+          fi
