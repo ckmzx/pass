@@ -1,4 +1,4 @@
-name: Create compact data carousel
+name: Refine data carousel controls
 on:
   push:
     paths:
@@ -7,32 +7,28 @@ on:
 permissions:
   contents: write
 jobs:
-  create-carousel:
+  refine-controls:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Replace tall image stack with compact carousel
+      - name: Place opaque arrows beside carousel image
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
-          old = '<div class="result-image-stack"><figure class="result-visual"><img src="./datapic_01.png" alt="학생 데이터 안내 이미지 1" loading="lazy" decoding="async"></figure><figure class="result-visual"><img src="./datapic_02.png" alt="학생 데이터 안내 이미지 2" loading="lazy" decoding="async"></figure></div>'
-          new = '<div class="result-carousel" role="region" aria-roledescription="캐러셀" aria-label="학생 데이터 안내 이미지" tabindex="0"><div class="result-carousel-track"><figure class="result-visual result-slide is-active" aria-hidden="false"><img src="./datapic_01.png" alt="학생 데이터 안내 이미지 1" loading="lazy" decoding="async"></figure><figure class="result-visual result-slide" aria-hidden="true"><img src="./datapic_02.png" alt="학생 데이터 안내 이미지 2" loading="lazy" decoding="async"></figure></div><div class="result-carousel-controls"><button type="button" class="result-prev" aria-label="이전 이미지">←</button><span class="result-carousel-count" aria-live="polite">1 / 2</span><button type="button" class="result-next" aria-label="다음 이미지">→</button></div></div>'
-          if html.count(old) != 1 or html.count('</style>') != 1 or html.count('</body>') != 1:
-              raise SystemExit('Expected data images or insertion points not found exactly once')
-          html = html.replace(old, new, 1)
-          css = '#result .result-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);align-items:stretch;gap:clamp(22px,3vw,42px)}#result .result-grid>.result{height:auto;align-self:stretch;box-sizing:border-box}#result .result-carousel{position:relative;min-width:0;min-height:clamp(280px,24vw,390px);overflow:hidden;border:1px solid #e8ebf3;border-radius:12px;background:#fff;box-shadow:0 10px 28px rgba(8,27,54,.08)}#result .result-carousel-track{position:absolute;inset:0 0 54px}#result .result-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;margin:0;min-height:0;height:auto;aspect-ratio:auto;background:transparent;opacity:0;visibility:hidden;transform:translateX(16px);transition:opacity .28s ease,transform .28s ease}#result .result-carousel[data-direction=prev] .result-slide{transform:translateX(-16px)}#result .result-slide.is-active{opacity:1;visibility:visible;transform:none}#result .result-slide img{display:block;width:100%;height:100%;max-height:none;object-fit:contain;padding:16px 20px;box-sizing:border-box}#result .result-carousel-controls{position:absolute;inset:auto 0 0;height:54px;display:flex;align-items:center;justify-content:center;gap:18px;border-top:1px solid #edf0f5;background:#fff}#result .result-carousel-controls button{width:34px;height:34px;border:1px solid #d5dcef;border-radius:50%;background:#fff;color:#243d81;font-size:20px;cursor:pointer}#result .result-carousel-controls button:focus-visible{outline:3px solid #4169e1;outline-offset:2px}#result .result-carousel-count{font-size:13px;font-weight:700;color:#526078}@media(max-width:780px){#result .result-grid{grid-template-columns:1fr;gap:20px}#result .result-carousel{min-height:clamp(250px,56vw,350px)}}@media(prefers-reduced-motion:reduce){#result .result-slide{transition:none}}'
-          js = '''<script>(function(){const box=document.querySelector('#result .result-carousel');if(!box)return;const slides=[...box.querySelectorAll('.result-slide')],count=box.querySelector('.result-carousel-count');let current=0;function show(next){box.dataset.direction=next<current?'prev':'next';current=(next+slides.length)%slides.length;slides.forEach((s,i)=>{s.classList.toggle('is-active',i===current);s.setAttribute('aria-hidden',String(i!==current))});count.textContent=(current+1)+' / '+slides.length}box.querySelector('.result-prev').addEventListener('click',()=>show(current-1));box.querySelector('.result-next').addEventListener('click',()=>show(current+1));box.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();show(current+(e.key==='ArrowLeft'?-1:1))}})})();</script>'''
-          html = html.replace('</style>', css + '</style>', 1).replace('</body>', js + '</body>', 1)
+          if html.count('class="result-carousel-controls"') != 1 or html.count('</style>') != 1 or 'result-carousel-controls button:hover' in html:
+              raise SystemExit('Expected data carousel not found or style already applied')
+          css = '#result .result-carousel{border-radius:18px;border:1px solid #e4e9f4;background:linear-gradient(145deg,#fff,#f7f9ff);box-shadow:0 16px 42px rgba(17,44,94,.12)}#result .result-carousel-track{inset:0}#result .result-slide img{padding:18px 64px 42px}#result .result-carousel-controls{inset:0;height:auto;align-items:center;justify-content:space-between;padding:0 14px;background:transparent;border:0;pointer-events:none}#result .result-carousel-controls button{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:#173b8d;color:#fff;font-size:23px;line-height:1;box-shadow:0 8px 20px rgba(23,59,141,.28);pointer-events:auto;transition:background .2s ease,transform .2s ease}#result .result-carousel-controls button:hover{background:#3156b7;transform:scale(1.08)}#result .result-carousel-count{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(17,44,94,.12);pointer-events:none}@media(max-width:780px){#result .result-slide img{padding:12px 50px 40px}#result .result-carousel-controls{padding:0 8px}#result .result-carousel-controls button{width:38px;height:38px;font-size:20px}}@media(prefers-reduced-motion:reduce){#result .result-carousel-controls button{transition:none}}'
+          html = html.replace('</style>', css + '</style>', 1)
           p.write_text(html, encoding='utf-8')
           PY
-      - name: Commit carousel
+      - name: Commit refined controls
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if ! git diff --cached --quiet; then
-            git commit -m 'feat: show data images in compact manual carousel'
+            git commit -m 'style: place opaque carousel arrows beside photos'
             git push origin HEAD:main
           fi
