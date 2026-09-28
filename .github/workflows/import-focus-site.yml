@@ -10,16 +10,16 @@ jobs:
   import-site:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ckmzx/focus-motion-ai
           ref: main
           path: source-focus
           persist-credentials: false
-      - name: Copy static site and replace preview
+      - name: Copy static site and update banners
         run: |
           mkdir -p focus-motion-ai
           rsync -a --delete --exclude='.git/' source-focus/ focus-motion-ai/
@@ -28,30 +28,26 @@ jobs:
           import re
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
-          if 'class="focus-ai-preview"' not in html:
-              start = html.find('<div class="visual">')
-              if start < 0:
-                  raise SystemExit('Preview visual block not found; homepage left unchanged')
-              depth = 0
-              end = None
-              for match in re.finditer(r'</?div\b[^>]*>', html[start:], re.I):
-                  token = match.group()
-                  depth += -1 if token.startswith('</') else 1
-                  if depth == 0:
-                      end = start + match.end()
-                      break
-              if end is None:
-                  raise SystemExit('Preview visual block not closed; homepage left unchanged')
-              card = '<a class="focus-ai-preview" href="./focus-motion-ai/" aria-label="Focus Motion AI 사이트 보기" style="display:block;width:100%;align-self:center"><img src="./pass_ai_info.png" alt="Focus Motion AI 실기 분석 소개" style="display:block;width:100%;height:auto"></a>'
-              p.write_text(html[:start] + card + html[end:], encoding='utf-8')
+          cards = ('<div class="focus-banners" aria-label="관련 서비스 안내">'
+                   '<a href="https://z-one.kr/" target="_blank" rel="noopener noreferrer" aria-label="Z-ONE 사이트 방문, 새 창"><img src="./banner_1.png" alt="Z-ONE 체대입시 서비스 안내" loading="lazy"></a>'
+                   '<a href="./focus-motion-ai/" aria-label="Focus Motion AI 사이트 보기"><img src="./banner_2.png" alt="Focus Motion AI 실기 분석 안내" loading="lazy"></a>'
+                   '</div>')
+          css = '.focus-banners{display:grid;gap:16px;width:100%;align-self:center}.focus-banners a{display:block;overflow:hidden;border-radius:18px;background:#f5f7fb;box-shadow:0 12px 28px rgba(8,27,54,.13);transition:transform .2s,box-shadow .2s}.focus-banners a:hover,.focus-banners a:focus-visible{transform:translateY(-3px);box-shadow:0 18px 34px rgba(8,27,54,.2)}.focus-banners a:focus-visible{outline:3px solid #1769ff;outline-offset:3px}.focus-banners img{display:block;width:100%;height:auto}'
+          if 'class="focus-banners"' not in html:
+              html, count = re.subn(r'<a class="focus-ai-preview"\b[^>]*>\s*<img\b[^>]*>\s*</a>', cards, html, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit('Existing preview not found; no homepage update')
+          if css not in html:
+              html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
           Path('.nojekyll').touch()
           PY
-      - name: Commit imported page
+      - name: Commit imported page and banners
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html focus-motion-ai .nojekyll
           if ! git diff --cached --quiet; then
-            git commit -m 'feat: add Focus Motion AI page under pass site'
+            git commit -m 'feat: replace Focus preview with two service banners'
             git push origin HEAD:main
           fi
