@@ -1,0 +1,48 @@
+name: Update data section images
+on:
+  push:
+    paths:
+      - '.github/workflows/update-data-images.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Replace two story cards with images
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for image in ('datapic_01.png', 'datapic_02.png'):
+              if not Path(image).is_file():
+                  raise SystemExit('Missing image: ' + image)
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          start = '<div class="result-grid">'
+          end = '</div><p class="disclaimer">※ 위 사례는 웹사이트 구성 예시를 위한 가상 내용입니다. 실제 합격 결과와 프로그램은 운영 현황에 맞게 교체해 주세요.</p>'
+          if html.count(start) != 1 or html.count(end) != 1 or html.count('</style>') != 1:
+              raise SystemExit('Expected result section not found exactly once')
+          i = html.index(start)
+          j = html.index(end, i)
+          cards = html[i + len(start):j]
+          found = re.findall(r'<article class="result">.*?</article>', cards, re.S)
+          if len(found) != 3 or ''.join(found) != cards or '가디언 · Z-ONE' not in found[0]:
+              raise SystemExit('Expected three data cards not found')
+          photos = '<figure class="result-visual"><img src="./datapic_01.png" alt="학생 데이터 안내 이미지 1" loading="lazy" decoding="async"></figure><figure class="result-visual"><img src="./datapic_02.png" alt="학생 데이터 안내 이미지 2" loading="lazy" decoding="async"></figure>'
+          html = html[:i] + start + found[0] + photos + '</div>' + html[j + len(end):]
+          css = '.result-visual{display:grid;place-items:center;min-width:0;min-height:360px;overflow:hidden;background:#f5f7fa;border-radius:8px}.result-visual img{display:block;width:100%;height:100%;max-height:440px;object-fit:contain}@media(max-width:780px){.result-visual{min-height:0;aspect-ratio:4/3}.result-visual img{max-height:none}}'
+          html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit data section
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: show two data images beside lead card'
+            git push origin HEAD:main
+          fi
