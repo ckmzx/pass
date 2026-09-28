@@ -1,0 +1,53 @@
+name: Add program detail dialogs
+on:
+  push:
+    paths:
+      - '.github/workflows/add-program-dialog.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  add-dialogs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add accessible program dialogs to homepage
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          h = p.read_text(encoding='utf-8')
+          start = h.find('<section class="programs" id="program">')
+          end = h.find('</section>', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Program section not found; no changes saved')
+          block = h[start:end]
+          if 'class="program-trigger"' not in block:
+              ids = ['g1', 'g2', 'g3']
+              names = ['예비 고1 기초 퍼포먼스반', '고2 기록 상승 집중반', '고3·N수 입시 완성반']
+              matches = list(re.finditer(r'<article class="program">', block))
+              if len(matches) != 3:
+                  raise SystemExit('Expected three program cards; no changes saved')
+              for i, m in reversed(list(enumerate(matches))):
+                  button = '<button type="button" class="program-trigger" data-program="' + ids[i] + '" aria-haspopup="dialog" aria-controls="program-dialog" aria-label="' + names[i] + ' 상세 보기"></button>'
+                  block = block[:m.end()] + button + block[m.end():]
+              h = h[:start] + block + h[end:]
+          css = '''.program-trigger{position:absolute;inset:0;width:100%;height:100%;z-index:2;cursor:pointer;border:0;background:transparent}.program:focus-within{outline:3px solid #1769ff;outline-offset:3px}.program-dialog{border:0;border-radius:22px;padding:0;width:min(92vw,580px);max-height:85dvh;overflow-y:auto;color:#111318;box-shadow:0 26px 80px rgba(3,20,50,.28)}.program-dialog::backdrop{background:rgba(3,17,38,.66);backdrop-filter:blur(4px)}.program-dialog[open]{animation:program-pop .24s ease-out}.program-modal-inner{position:relative;padding:36px}.program-close{position:absolute;right:23px;top:19px;width:38px;height:38px;border:0;background:#f0f4f9;border-radius:50%;font-size:25px;cursor:pointer}.program-kicker{color:#1769ff;font-weight:800;font-size:12px;letter-spacing:1.4px}.program-dialog h2{font-size:28px;line-height:1.35;margin:14px 42px 12px 0;letter-spacing:-1px}.program-lead{font-size:15px;line-height:1.8;color:#556174;margin:0 0 24px}.program-dialog h3{font-size:16px;margin:0 0 10px}.program-dialog ul{list-style:none;padding:0;margin:0}.program-dialog li{padding:12px 0;border-top:1px solid #e5e9f1;font-size:14px;line-height:1.6}.program-dialog li:before{content:'✓';color:#1769ff;font-weight:900;margin-right:10px}.program-note{font-size:12px;color:#697386;line-height:1.7;margin:20px 0}.program-cta{display:flex;gap:10px}.program-cta a{flex:1;text-align:center;padding:14px 10px;border-radius:8px;background:#003887;color:white;font-size:14px;font-weight:800}.program-cta a:first-child{background:#03c75a}@keyframes program-pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}@media(max-width:780px){.program-dialog{position:fixed;inset:auto 0 0;width:100%;max-width:none;max-height:88dvh;margin:0;border-radius:24px 24px 0 0}.program-modal-inner{padding:30px 24px max(26px,env(safe-area-inset-bottom))}.program-dialog h2{font-size:24px}.program-cta{flex-direction:column}.program-dialog[open]{animation:program-sheet .25s ease-out}}@keyframes program-sheet{from{transform:translateY(100%)}to{transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.program-dialog[open]{animation:none}}'''
+          if '.program-dialog::backdrop' not in h:
+              h = h.replace('</style>', css + '</style>', 1)
+          popup = '''<dialog id="program-dialog" class="program-dialog" aria-labelledby="program-title"><div class="program-modal-inner"><button type="button" class="program-close" aria-label="프로그램 안내 닫기">×</button><div class="program-kicker">PASS PROGRAM</div><h2 id="program-title"></h2><p class="program-lead" id="program-lead"></p><h3>프로그램 안내</h3><ul id="program-items"></ul><p class="program-note">구체적인 훈련 구성과 일정은 상담 시 안내합니다.</p><div class="program-cta"><a href="https://naver.me/5ZJnyauB" target="_blank" rel="noopener noreferrer">네이버 상담 예약</a><a href="tel:032-721-3747">전화 상담</a></div></div></dialog>'''
+          js = '''<script>(function(){const d=document.getElementById('program-dialog');const close=d.querySelector('.program-close');const data={g1:{title:'예비 고1 · 기초 퍼포먼스반',lead:'바른 움직임과 기초체력을 다지며 실기 종목을 준비하는 과정입니다.',items:['현재 체력과 기본 움직임 점검','기초체력과 바른 동작 중심 훈련','기록 변화 확인과 다음 목표 설정']},g2:{title:'고2 · 기록 상승 집중반',lead:'현재 기록을 살펴보고 종목별 기술 훈련과 피드백을 연결합니다.',items:['종목별 실기 기록 점검','기술 훈련과 움직임 피드백','목표 기록에 따른 훈련 방향 조정']},g3:{title:'고3·N수 · 입시 완성반',lead:'실기 준비와 지원 대학별 전형 검토를 함께 이어갑니다.',items:['지원 대학의 실기 종목 확인','실기 기록과 학업 현황 점검','모의 실기 및 지원 전략 상담']}};let previousOverflow='';document.querySelectorAll('.program-trigger').forEach(b=>b.addEventListener('click',()=>{const item=data[b.dataset.program];if(!item)return;document.getElementById('program-title').textContent=item.title;document.getElementById('program-lead').textContent=item.lead;const list=document.getElementById('program-items');list.replaceChildren(...item.items.map(t=>{const li=document.createElement('li');li.textContent=t;return li}));previousOverflow=document.body.style.overflow;d.showModal();document.body.style.overflow='hidden';close.focus()}));close.addEventListener('click',()=>d.close());d.addEventListener('click',e=>{if(e.target===d)d.close()});d.addEventListener('close',()=>{document.body.style.overflow=previousOverflow})})();</script>'''
+          if 'id="program-dialog"' not in h:
+              h = h.replace('</body>', popup + js + '</body>', 1)
+          p.write_text(h, encoding='utf-8')
+          PY
+      - name: Commit homepage program dialog
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: add responsive program detail dialogs'
+            git push origin HEAD:main
+          fi
