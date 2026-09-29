@@ -1,0 +1,45 @@
+name: Refine instructor cards
+on:
+  push:
+    paths:
+      - '.github/workflows/profile-school-watermark.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Move education and add faint logo
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path('greeting.html')
+          html = p.read_text(encoding='utf-8')
+          for name, school in (('조경민', '성균관대학교 스포츠과학대학 스포츠과학과'), ('김택중', '한양대학교 체육대학 체육학과')):
+              matches = [m for m in re.finditer(r'<article class="profile">.*?</article>', html, flags=re.S) if '<h3>' + name + '</h3>' in m.group(0)]
+              if len(matches) != 1:
+                  raise SystemExit(name + ': profile not found exactly once')
+              m = matches[0]
+              card = m.group(0)
+              old_school = '<p class="school">' + school + '</p>'
+              if card.count(old_school) != 1 or card.count('<ul class="career-list">') != 1:
+                  raise SystemExit(name + ': education/list not found exactly once')
+              card = card.replace(old_school, '', 1)
+              card = card.replace('<div class="profile-head">', '<div class="profile-head"><img class="profile-watermark" src="./logo.png" alt="" aria-hidden="true" decoding="async">', 1)
+              card = card.replace('<ul class="career-list">', '<ul class="career-list"><li>' + school + '</li>', 1)
+              html = html[:m.start()] + card + html[m.end():]
+          css = '.profile-head{position:relative;isolation:isolate;min-height:164px;display:flex;flex-direction:column;justify-content:center}.profile-watermark{position:absolute;right:24px;top:24px;width:clamp(98px,34%,156px);max-height:98px;object-fit:contain;opacity:.10;pointer-events:none;user-select:none}.profile-head h3,.profile-head .role{position:relative;z-index:1}@media(max-width:650px){.profile-head{min-height:142px}.profile-watermark{right:18px;top:20px;width:110px;opacity:.08}}'
+          if html.count('</style>') != 1:
+              raise SystemExit('Stylesheet not found')
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit greeting card refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html
+          git commit -m 'style: align instructor education and watermark'
+          git push origin HEAD:main
