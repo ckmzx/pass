@@ -11,23 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Link directions quick card
+      - name: Link directions card by its class
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
-          old = 'href="#result" aria-label="오시는 길 보기"'
-          new = 'href="https://naver.me/5ZJnyauB" target="_blank" rel="noopener noreferrer" aria-label="오시는 길 보기, 새 창"'
-          if html.count(old) != 1:
-              raise SystemExit('Directions card not found exactly once; no changes saved')
-          p.write_text(html.replace(old, new, 1), encoding='utf-8')
+          pattern = r'(<a\b(?=[^>]*\bquick-link--04\b)[^>]*\bhref=")[^"]*(")'
+          url = 'https://naver.me/5ZJnyauB'
+          html, n = re.subn(pattern, lambda m: m.group(1) + url + m.group(2), html, count=1)
+          if n != 1:
+              raise SystemExit('Directions quick card not found; no changes saved')
+          p.write_text(html, encoding='utf-8')
           PY
-      - name: Commit directions link
+      - name: Commit and push
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if ! git diff --cached --quiet; then
-            git commit -m 'feat: open Naver map from directions card'
+            git commit -m 'fix: link directions quick card to Naver'
             git push origin HEAD:main
