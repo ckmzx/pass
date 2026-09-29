@@ -1,0 +1,35 @@
+name: Update greeting instructor profiles
+on:
+  push:
+    paths:
+      - '.github/workflows/update-greeting-profiles.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Replace two profile cards and styles
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path('greeting.html')
+          html = p.read_text(encoding='utf-8')
+          cards = '''<div class="people-grid"><article class="profile"><div class="profile-head"><p class="school">성균관대학교 스포츠과학대학 스포츠과학과</p><h3>조경민</h3><p class="role">원장</p></div><div class="profile-body"><h4>경력 / 자격사항</h4><ul class="career-list"><li>現) 패스체대입시 연수송도센터 원장</li><li>現) 매스업 트레이닝 대표</li><li>現) Focus Motion AI 대표</li><li>前) 공무원체력학원 노원점 원장</li><li>前) 대한체육회 검도 서울시 대표</li><li>前) 한국-일본 검도교류전 한국대표</li><li>前) 한국-태국 검도교류전 한국대표</li><li>전국/시/도급 검도대회 우승 37회</li><li>생활체육지도자 2급 검도</li><li>대한검도회 검도 공인 3단</li></ul></div></article><article class="profile"><div class="profile-head"><p class="school">한양대학교 체육대학 체육학과</p><h3>김택중</h3><p class="role">이사</p></div><div class="profile-body"><h4>경력 / 자격사항</h4><ul class="career-list"><li>現) 패스체대입시 연수송도센터 이사</li><li>現) (사) 대한 유소년 연맹 회장</li><li>現) 양천구 풋살연맹 이사</li><li>現) 김포시 체육회 이사</li><li>現) (사) 한국문화스포츠연맹 이사</li><li>現) 모두소 공무원체력담당</li><li>現) 공무원체력학원 노원점 이사</li><li>前) 체대입시학원 목동, 보라매, 노원점 원장</li><li>前) 에듀월 공무원체력담당 교수</li><li>대한생활체육 운동처방사</li><li>한국여가레크레이션 2급 자격증</li></ul></div></article></div></section>'''
+          pattern = r'<div class="people-grid">.*?</div></section>'
+          html, n = re.subn(pattern, lambda _: cards, html, count=1, flags=re.S)
+          if n != 1 or html.count('</style>') != 1:
+              raise SystemExit('Expected profile grid/style not found; nothing saved')
+          css = '''.people-grid{align-items:stretch;gap:24px}.profile{padding:0;overflow:hidden;border-radius:20px;box-shadow:0 14px 36px rgba(17,44,94,.075)}.profile-head{padding:30px 32px 26px;background:linear-gradient(135deg,#eef5ff,#fff);border-bottom:1px solid var(--line)}.profile .school{margin:0 0 15px;color:#60718b;font-size:13px;line-height:1.6}.profile h3{margin:0 0 6px;color:var(--navy);font-size:30px;letter-spacing:-.05em}.profile .role{margin:0;color:#1769ff;font-size:20px;font-weight:900;line-height:1.45}.profile-body{padding:24px 32px 32px}.profile h4{margin:0 0 14px;padding:0;border:0;font-size:15px;color:var(--navy)}.profile .career-list{list-style:none;padding:0;margin:0}.profile .career-list li{position:relative;margin:0;padding:10px 0 10px 18px;border-top:1px solid #edf1f7;color:#40536e;font-size:14px;line-height:1.65;word-break:keep-all}.profile .career-list li:first-child{border-top:0}.profile .career-list li:before{content:'';position:absolute;left:2px;top:20px;width:6px;height:6px;border-radius:50%;background:#6ebaff}@media(max-width:650px){.profile-head{padding:24px}.profile-body{padding:22px 24px 26px}.profile h3{font-size:27px}.profile .role{font-size:18px}}'''
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit profiles
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html
+          git commit -m 'feat: publish instructors careers and credentials'
+          git push origin HEAD:main
