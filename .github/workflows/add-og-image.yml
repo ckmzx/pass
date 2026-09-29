@@ -1,0 +1,34 @@
+name: Add social preview image metadata
+on:
+  push:
+    paths:
+      - '.github/workflows/add-og-image.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-og:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add absolute Open Graph image and URL
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          old = '<meta property="og:description" content="패스체대입시 - 기록, 전략, 관리로 완성하는 체대입시">'
+          if not Path('og_image.png').is_file() or html.count(old) != 1 or 'property="og:image"' in html:
+              raise SystemExit('Expected OG description or preview image file not found, or OG image already exists')
+          new = old + '\n  <meta property="og:type" content="website">\n  <meta property="og:url" content="https://xn--9t4b151a.kr/">\n  <meta property="og:image" content="https://xn--9t4b151a.kr/og_image.png">\n  <meta property="og:image:alt" content="패스체대입시 인천송도센터">'
+          p.write_text(html.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit preview metadata
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: use og_image.png in social previews'
+            git push origin HEAD:main
+          fi
