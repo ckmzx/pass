@@ -21,7 +21,10 @@
 <footer class="footer">© PASS 인천송도센터 · STUDENT VIDEO PORTAL</footer>
 </div>
 <script>
-const studentFolders=[{code:'조경민',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgCIueNVemxrQrnhJJZe93PVAc93D3XcbJUa60B6hrbpca0?e=iJv8uA'}];
+const studentFolders=[
+{code:'공인우',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDeLfC7IbiuTIRJbQhI2byRAX1exChZnLLwrA91uUU0wx8?e=Z8q6RA'},
+{code:'김건',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDzxIUahEpsTbzunNIwhguqAW7Bv8Za1KmqFDxYTFpFCaQ?e=n3njTf'}
+];
 const links=new Map(studentFolders.map(({code,url})=>[code.trim().toUpperCase(),url]));
 document.getElementById('portal').addEventListener('submit',event=>{
   event.preventDefault();
