@@ -1,0 +1,76 @@
+name: Sync subpage headers
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-subpage-header.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Copy homepage header and responsive styles
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          home = Path('index.html').read_text(encoding='utf-8')
+          header = re.search(r'<header>.*?</header>', home, flags=re.S)
+          style = re.search(r'<style[^>]*>(.*?)</style>', home, flags=re.S)
+          if not header or not style:
+              raise SystemExit('Homepage header or stylesheet not found')
+          header = re.sub(r'href="#([^"]+)"', lambda m: 'href="./index.html#' + m.group(1) + '"', header.group(0))
+          targets = ('header', '.wrap', '.nav', '.brand', '.brand-logo', '.nav-links', '.nav-cta', '.menu')
+          def selected(s):
+              return any(re.search(r'(^|[\s>,+~])' + re.escape(t) + r'(?=[:.#\s>,+~\[{]|$)', s) for t in targets)
+          def rules(css):
+              output = []
+              pos = 0
+              while True:
+                  opening = css.find('{', pos)
+                  if opening < 0:
+                      break
+                  selector = css[pos:opening].strip()
+                  depth = 1
+                  end = opening + 1
+                  while end < len(css) and depth:
+                      depth += (css[end] == '{') - (css[end] == '}')
+                      end += 1
+                  if depth:
+                      raise SystemExit('Unbalanced homepage stylesheet')
+                  body = css[opening + 1:end - 1]
+                  if selector.startswith('@media'):
+                      nested = rules(body)
+                      if nested:
+                          output.append(selector + '{' + nested + '}')
+                  elif selected(selector):
+                      output.append(selector + '{' + body + '}')
+                  pos = end
+              return ''.join(output)
+          nav_css = rules(style.group(1))
+          if '.nav-links' not in nav_css or '.menu' not in nav_css:
+              raise SystemExit('Navigation styles not found')
+          body_font = re.search(r'(?:^|})\s*body\{([^}]*)\}', style.group(1))
+          if body_font:
+              font = re.search(r'font-family\s*:[^;}]+' , body_font.group(1))
+              if font:
+                  nav_css += 'header{' + font.group(0) + '}'
+          for name in ('partners.html', 'greeting.html'):
+              p = Path(name)
+              page = p.read_text(encoding='utf-8')
+              page, count = re.subn(r'<header>.*?</header>', lambda _: header, page, count=1, flags=re.S)
+              if count != 1 or page.count('</style>') != 1:
+                  raise SystemExit(name + ': expected header/style not found')
+              page = re.sub(r'<script>const btn=document\.querySelector\(\'.menu\'\);.*?</script>', '', page, count=1, flags=re.S)
+              page = page.replace('</style>', nav_css + '</style>', 1)
+              p.write_text(page, encoding='utf-8')
+          PY
+      - name: Commit both subpages
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html greeting.html
+          git commit -m 'style: match subpage headers to home'
+          git push origin HEAD:main
