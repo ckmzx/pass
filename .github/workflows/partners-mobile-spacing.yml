@@ -1,0 +1,33 @@
+name: Adjust partner cards on mobile
+on:
+  push:
+    paths:
+      - '.github/workflows/partners-mobile-spacing.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  adjust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add mobile-only spacing rules
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('partners.html')
+          html = p.read_text(encoding='utf-8')
+          css = '@media(max-width:540px){.gallery.wrap{padding:22px 24px 78px}.gallery-grid{max-width:380px;margin-inline:auto;gap:20px}.visual{aspect-ratio:1.65}.info{padding:16px 18px 18px}}'
+          if html.count('</style>') != 1 or css in html:
+              raise SystemExit('Expected stylesheet not found or rule already applied')
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit mobile spacing
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'style: inset and shorten partner cards on mobile'
+            git push origin HEAD:main
+          fi
