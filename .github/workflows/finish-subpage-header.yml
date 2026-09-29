@@ -1,0 +1,44 @@
+name: Finish subpage header alignment
+on:
+  push:
+    paths:
+      - '.github/workflows/finish-subpage-header.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Offset content and match header colors
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          home = Path('index.html').read_text(encoding='utf-8')
+          root = re.search(r':root\s*\{([^}]*)\}', home)
+          if not root:
+              raise SystemExit('Homepage color variables not found')
+          declarations = []
+          for key in ('--ink', '--line'):
+              match = re.search(re.escape(key) + r'\s*:[^;}]+' , root.group(1))
+              if match:
+                  declarations.append(match.group(0))
+          css = 'body>main{padding-top:78px}'
+          if declarations:
+              css += 'header{' + ';'.join(declarations) + '}'
+          for filename in ('partners.html', 'greeting.html'):
+              p = Path(filename)
+              page = p.read_text(encoding='utf-8')
+              if page.count('</style>') != 1 or 'body>main{padding-top:78px}' in page:
+                  raise SystemExit(filename + ': expected stylesheet not found or already changed')
+              p.write_text(page.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit both pages
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html partners.html
+          git commit -m 'fix: space subpages below fixed home header'
+          git push origin HEAD:main
