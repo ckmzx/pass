@@ -1,0 +1,33 @@
+name: Round partner logo tiles
+on:
+  push:
+    paths:
+      - '.github/workflows/round-partner-logos.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Round partner image corners
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('partners.html')
+          html = p.read_text(encoding='utf-8')
+          css = '.visual img{inset:20px;width:calc(100% - 40px);height:calc(100% - 40px);padding:0;border-radius:16px;background:#fff;box-shadow:0 7px 18px rgba(15,48,94,.08)}@media(max-width:540px){.visual img{inset:16px;width:calc(100% - 32px);height:calc(100% - 32px);border-radius:14px}}'
+          if html.count('</style>') != 1 or css in html:
+              raise SystemExit('Expected stylesheet not found or style already applied')
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit logo style
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'style: soften partner image corners'
+            git push origin HEAD:main
+          fi
