@@ -1,0 +1,37 @@
+name: Add Jok memberships
+on:
+  push:
+    paths:
+      - '.github/workflows/add-jok-memberships.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Append memberships to Jok card only
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path('greeting.html')
+          html = p.read_text(encoding='utf-8')
+          matches = [m for m in re.finditer(r'<article class="profile">.*?</article>', html, flags=re.S) if '<h3>조경민</h3>' in m.group(0)]
+          if len(matches) != 1:
+              raise SystemExit('Jo Gyeong-min card not found exactly once')
+          m = matches[0]
+          card = m.group(0)
+          if card.count('</ul>') != 1 or '한국체육학회 정회원' in card or '한국스포츠심리학회 정회원' in card:
+              raise SystemExit('Expected one unmodified career list')
+          card = card.replace('</ul>', '<li>한국체육학회 정회원</li><li>한국스포츠심리학회 정회원</li></ul>', 1)
+          p.write_text(html[:m.start()] + card + html[m.end():], encoding='utf-8')
+          PY
+      - name: Commit membership lines
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html
+          git commit -m 'content: add Jok society memberships'
+          git push origin HEAD:main
