@@ -1,0 +1,42 @@
+name: Turn quick items into navigation cards
+on:
+  push:
+    paths:
+      - '.github/workflows/quick-link-cards.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Style quick items as navigable links
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          cards = [('01','맞춤 진단','현재 위치를 정확히','#about'),('02','기록 향상','종목별 퍼포먼스 설계','#program'),('03','입시 전략','대학·전형별 지원 분석','#process'),('04','끝까지 관리','실기와 학업의 균형','#result')]
+          if html.count('</style>') != 1:
+              raise SystemExit('Stylesheet insertion point not found')
+          for n, name, sub, href in cards:
+              inside = f'<span class="quick-num">{n}</span><div><div class="quick-name">{name}</div><div class="quick-sub">{sub}</div></div>'
+              old = f'<div class="quick-item">{inside}</div>'
+              new = f'<a class="quick-item quick-link quick-link--{n}" href="{href}" aria-label="{name} 자세히 보기">{inside}</a>'
+              if html.count(old) != 1:
+                  raise SystemExit('Expected card not found exactly once: ' + n)
+              html = html.replace(old, new, 1)
+          css = '.quick-grid{gap:14px;box-shadow:none}.quick-grid .quick-item{position:relative;display:flex;align-items:flex-start;gap:13px;min-height:136px;padding:24px 20px;border:0;border-radius:9px;color:#fff;box-shadow:0 10px 22px rgba(8,27,54,.15);transition:box-shadow .2s ease,filter .2s ease}.quick-grid .quick-link--01{background:#103f88}.quick-grid .quick-link--02{background:#1762b1}.quick-grid .quick-link--03{background:#287fc4}.quick-grid .quick-link--04{background:#137f94}.quick-grid .quick-item .quick-num{color:rgba(255,255,255,.8);font-size:27px}.quick-grid .quick-item .quick-name{color:#fff;font-size:17px}.quick-grid .quick-item .quick-sub{color:rgba(255,255,255,.88);font-size:12px;line-height:1.5}.quick-link::after{content:"↗";position:absolute;right:19px;bottom:16px;color:#fff;font-size:22px;font-weight:600}.quick-grid .quick-link:hover{filter:brightness(1.08);box-shadow:0 16px 28px rgba(8,27,54,.22)}html.scroll-animate .quick-link.scroll-reveal.is-visible:hover{transform:translate3d(0,-6px,0)}.quick-link:focus-visible{outline:3px solid #70c8ff;outline-offset:4px}@media(max-width:780px){.quick-grid{gap:10px}.quick-grid .quick-item{min-height:126px;padding:17px 14px;border:0}.quick-grid .quick-item .quick-name{font-size:14px}.quick-grid .quick-item .quick-num{font-size:23px}.quick-link::after{right:12px;bottom:10px;font-size:18px}}@media(prefers-reduced-motion:reduce){.quick-grid .quick-link{transition:none}}'
+          html = html.replace('</style>', css + '</style>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit navigation cards
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: make quick cards colorful navigation links'
+            git push origin HEAD:main
+          fi
