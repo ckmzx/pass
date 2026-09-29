@@ -1,0 +1,34 @@
+name: Update greeting copy
+on:
+  push:
+    paths:
+      - '.github/workflows/update-greeting-copy.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Replace only greeting panel text
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path('greeting.html')
+          html = p.read_text(encoding='utf-8')
+          copy = '''<p class="label">A MESSAGE FROM PASS</p><h2 id="greeting-title">안녕하세요. 패스체대입시 인천송도센터입니다.</h2><p>저희는 체대 '입시' 학원입니다. 단순히 운동만 가르치는 체력학원이 아닙니다.<br>실기 기록은 당연히 챙기며 내신과 정시를 어우르는 전반적인 학업 관리, 학생부종합전형 및 면접 대비 생기부 관리, 면접 전형 대비까지 모두 다 가능해야 비로소 입시학원이라고 말할 수 있다고 생각합니다.</p><p>저희 패스체대입시 인천송도센터는 이 모든것을 체계적으로 관리합니다.</p><p>학생마다 출발점과 목표가 다르기에, 같은 훈련과 공부를 반복하기보다 지금 필요한 준비를 찾는 일이 먼저라고 믿습니다.</p><p>저희는 실기 기록과 움직임을 세심하게 살피고, 학업 현황과 지원 전형까지 함께 검토하며 학생에게 맞는 준비 과정을 설계합니다. 결과를 서두르기보다 매일의 작은 변화를 확인하고 다음 목표로 이어가겠습니다.</p><p>도전하는 학생의 곁에서 체육대학 입학이라는 꿈을 이루는 과정을 함께하겠습니다. 감사합니다.</p>'''
+          pattern = r'(<div class="greeting-panel">).*?(</div>)'
+          updated, n = re.subn(pattern, lambda m: m.group(1) + copy + m.group(2), html, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Greeting panel not found; nothing saved')
+          p.write_text(updated, encoding='utf-8')
+          PY
+      - name: Commit greeting copy
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html
+          git commit -m 'content: use supplied greeting text'
+          git push origin HEAD:main
