@@ -1,0 +1,35 @@
+name: Add sitewide scroll reveal
+on:
+  push:
+    paths:
+      - '.github/workflows/add-scroll-reveal.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  add-reveal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add progressive section animations
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          if html.count('</style>') != 1 or html.count('</body>') != 1 or 'scroll-reveal' in html:
+              raise SystemExit('Expected insertion points missing or reveal already present')
+          css = 'html.scroll-animate .scroll-reveal{opacity:0;transform:translate3d(0,26px,0);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1);transition-delay:var(--reveal-delay,0ms)}html.scroll-animate .scroll-reveal.is-visible{opacity:1;transform:translate3d(0,0,0)}@media(prefers-reduced-motion:reduce){html.scroll-animate .scroll-reveal{opacity:1!important;transform:none!important;transition:none!important}}'
+          js = '''<script>(function(){if(!('IntersectionObserver' in window)||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;const selectors=['.hero-grid > div:first-child','.hero-gallery','.quick-item','#about .intro-grid > div:first-child','#about .focus-banners','.program-head','.program-grid','.steps .eyebrow','.steps .section-title','.step','#result .eyebrow','#result .section-title','#result .result-grid','.consult-inner > div:first-child','.consult-actions','.footer-grid','.copyright'];const targets=[...document.querySelectorAll(selectors.join(','))];if(!targets.length)return;targets.forEach(el=>{if(el.matches('.quick-item,.step')){const index=Array.prototype.indexOf.call(el.parentElement.children,el);el.style.setProperty('--reveal-delay',((index%4)*80)+'ms')}el.classList.add('scroll-reveal')});document.documentElement.classList.add('scroll-animate');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.08,rootMargin:'0px 0px -30px 0px'});targets.forEach(el=>observer.observe(el))})();</script>'''
+          html = html.replace('</style>', css + '</style>', 1).replace('</body>', js + '</body>', 1)
+          p.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit reveal effect
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: add sitewide scroll reveal animation'
+            git push origin HEAD:main
+          fi
