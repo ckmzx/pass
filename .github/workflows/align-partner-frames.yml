@@ -1,0 +1,33 @@
+name: Align partner image frames
+on:
+  push:
+    paths:
+      - '.github/workflows/align-partner-frames.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Replace double frame with one matching image outline
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('partners.html')
+          html = p.read_text(encoding='utf-8')
+          css = '.visual:before{display:none}.visual img{border:1px solid rgba(35,88,163,.14)}'
+          if html.count('</style>') != 1 or css in html:
+              raise SystemExit('Expected stylesheet missing or style already applied')
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit frame adjustment
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'style: align outline to rounded partner images'
+            git push origin HEAD:main
+          fi
