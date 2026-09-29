@@ -1,0 +1,49 @@
+name: Link partner sites
+on:
+  push:
+    paths:
+      - '.github/workflows/link-partner-sites.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  link:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Link cards without changing existing content
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          from html import escape
+          file = Path('partners.html')
+          html = file.read_text(encoding='utf-8')
+          urls = [
+              'https://z-one.kr/',
+              'http://www.towatekkorea.com/',
+              'https://naver.me/GyYAtFZV',
+              'https://www.instagram.com/focusmotion_ai',
+              'https://cafe.naver.com/physicalclinic',
+              'http://www.naraehospital.com/',
+          ]
+          if html.count('<article class="partner">') != 6:
+              raise SystemExit('Expected six unlinked cards; nothing changed')
+          for n, url in enumerate(urls, 1):
+              key = f'<article class="partner"><div class="visual"><span class="fallback"><strong>PARTNER {n:02d}</strong>'
+              pattern = re.escape(key) + r'(.*?)</article>'
+              replacement = f'<a class="partner" href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="협력 업체 {n:02d} 사이트 방문, 새 창"><div class="visual"><span class="fallback"><strong>PARTNER {n:02d}</strong>'
+              html, count = re.subn(pattern, lambda m: replacement + m.group(1) + '</a>', html, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'Card {n:02d} not found; nothing changed')
+          file.write_text(html, encoding='utf-8')
+          PY
+      - name: Commit partner links
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: connect partner cards to six sites'
+            git push origin HEAD:main
+          fi
