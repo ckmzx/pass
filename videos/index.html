@@ -23,7 +23,23 @@
 <script>
 const studentFolders=[
 {code:'공인우',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDeLfC7IbiuTIRJbQhI2byRAX1exChZnLLwrA91uUU0wx8?e=Z8q6RA'},
-{code:'김건',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDzxIUahEpsTbzunNIwhguqAW7Bv8Za1KmqFDxYTFpFCaQ?e=n3njTf'}
+{code:'김건',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDzxIUahEpsTbzunNIwhguqAW7Bv8Za1KmqFDxYTFpFCaQ?e=n3njTf'},
+{code:'김민찬',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgANtY7CVJ54S4FRtxkDZUNxAVGmujQi55_PXWoSXeacTpg?e=OtNDeJ'},
+{code:'김범준',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDxS03tcHiPTa54578Q5UixAXCdIl3NvdZ-yvPCMfXNkUI?e=URK6KO'},
+{code:'김은호',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgAjSeN4CqOySoHKeO0HKRPNASt3ATT7mrdZMfO-CdFjevA?e=BJbFKx'},
+{code:'김재인',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgBkJrQcCkDUQp8WavNsTjhwAejlYEnojXpRuBuXbPzYk8Y?e=PGkQ1z'},
+{code:'김태양',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgCcKmGgzjOxSJkinQFlIIbFAfRaL_4gfAAv1ji_F0OW6vc?e=9lzHcw'},
+{code:'김현민',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgAMJamj8obfSqWhRp2H7ADRAaDG9qjZipfwXMKut5NORqI?e=ywV21y'},
+{code:'류하민',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgAWNkkRKdDuR5qMpwPqVmTbARfQ9unTq9nP0kMU_Infpek?e=aRaUzv'},
+{code:'민유담',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDJ2svkxvaxR6B3lYVkxbuTASMQb9pY7WuBQrqoHtVdG3E?e=0xUgbA'},
+{code:'박아연',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgCm2NghMFQRTZjzr6jdxNEKAQgN-OKS-Xjk-PNrW8BfgU0?e=FQahOJ'},
+{code:'배기효',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgCHZ4TF2HdTQYUv9buJZklxAUfD6-g_WnH1t2uAtdkdbVs?e=nUgPBv'},
+{code:'성연후',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDEkjeMyjYeS7SyFfExIN81AcsL3ZVfMvV_b0FCE81kAis?e=YCclBe'},
+{code:'윤재영',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgBPIBuEu8-TQ5QKfr8I4s4EAdwS0jI5-Qksgv4HeJyhqV8?e=Y42VE5'},
+{code:'이상현',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgB4SlB67E_2RbxMZyvIb_D8AYJTjE668UD_m7D0NtVO3Jg?e=5DydmM'},
+{code:'이율',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgAFjad1xd82RL1cQOEVn1i9Aaz38DU2KMpGF7C2BWi34gI?e=2GEbr8'},
+{code:'이진섭',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDG3qC2KT0aTL6AUtTYbUS5AYAm1rit34uYMEbRE7NCgXE?e=RdRyBQ'},
+{code:'한은총',url:'https://o365skku-my.sharepoint.com/:f:/g/personal/ckmn_o365_skku_edu/IgDa2mb3RzIBTqfZPv0DbnupAeziIIY8AnMho0xPIeSUqkg?e=F6eq8E'}
 ];
 const links=new Map(studentFolders.map(({code,url})=>[code.trim().toUpperCase(),url]));
 document.getElementById('portal').addEventListener('submit',event=>{
