@@ -1,0 +1,45 @@
+name: Add greeting page
+on:
+  push:
+    paths:
+      - '.github/workflows/add-greeting-page.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build greeting page and link home card
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          page_path = Path('greeting.html')
+          if page_path.exists():
+              raise SystemExit('Greeting page already exists; refusing to overwrite it')
+          source = Path('partners.html').read_text(encoding='utf-8')
+          if '<title>협력 업체 |' not in source or source.count('</style>') != 1:
+              raise SystemExit('Partner template changed; nothing saved')
+          css = '''.greeting.wrap{padding:24px 30px 82px}.greeting-panel{max-width:880px;margin:auto;padding:clamp(30px,5vw,60px);border:1px solid var(--line);border-radius:22px;background:linear-gradient(150deg,#fff,#f7faff);box-shadow:0 16px 40px rgba(17,44,94,.07)}.greeting-panel .label{margin:0 0 15px;color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.16em}.greeting-panel h2{margin:0 0 26px;color:var(--navy);font-size:clamp(25px,3vw,34px);letter-spacing:-.055em;line-height:1.4}.greeting-panel p:not(.label):not(.signature){margin:0 0 18px;color:#40536e;font-size:16px;line-height:2;word-break:keep-all}.greeting-panel .signature{margin:32px 0 0;font-size:15px;font-weight:800;color:var(--navy)}.people.wrap{padding:0 30px 112px}.people-head{margin:0 0 28px;text-align:center}.people-head .label{margin:0 0 8px;color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.16em}.people-head h2{margin:0;font-size:clamp(25px,3vw,32px);letter-spacing:-.045em}.people-grid{max-width:1000px;margin:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.profile{padding:30px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 10px 32px rgba(17,44,94,.06)}.profile .number{display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;background:#edf4ff;color:#1769ff;font-size:15px;font-weight:900}.profile h3{margin:18px 0 4px;color:var(--navy);font-size:24px}.profile .role{margin:0 0 24px;color:var(--muted);font-size:14px}.profile h4{margin:0 0 10px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--navy)}.profile ul{margin:0;padding-left:20px;color:#53647b;font-size:14px;line-height:2.1}@media(max-width:650px){.greeting.wrap{padding:16px 20px 62px}.people.wrap{padding:0 20px 78px}.people-grid{grid-template-columns:1fr;gap:16px}.profile{padding:24px}.greeting-panel p:not(.label):not(.signature){font-size:15px;line-height:1.9}}'''
+          main = '''<main><section class="heading"><div class="wrap"><p class="eyebrow">PASS INCHEON SONGDO</p><h1>인사말</h1><p>학생의 가능성을 함께 살피고 성장의 과정을 함께합니다.</p></div></section><section class="greeting wrap" aria-labelledby="greeting-title"><div class="greeting-panel"><p class="label">A MESSAGE FROM PASS</p><h2 id="greeting-title">기록 너머의 가능성을 함께 봅니다.</h2><p>안녕하세요. 패스체대입시 인천송도센터입니다.</p><p>체대입시는 기록 하나로 완성되지 않습니다. 학생마다 출발점과 목표가 다르기에, 같은 훈련을 반복하기보다 지금 필요한 준비를 찾는 일이 먼저라고 믿습니다.</p><p>저희는 실기 기록과 움직임을 세심하게 살피고, 학업 현황과 지원 전형까지 함께 검토하며 학생에게 맞는 준비 과정을 설계합니다. 결과를 서두르기보다 매일의 작은 변화를 확인하고 다음 목표로 이어가겠습니다.</p><p>도전하는 학생의 곁에서 성장의 과정을 함께하겠습니다. 감사합니다.</p><p class="signature">패스체대입시 인천송도센터 드림</p></div></section><section class="people wrap" aria-labelledby="people-title"><div class="people-head"><p class="label">OUR PEOPLE</p><h2 id="people-title">함께하는 사람들</h2></div><div class="people-grid"><article class="profile"><span class="number" aria-hidden="true">01</span><h3>이름 입력</h3><p class="role">직책 입력</p><h4>주요 경력</h4><ul><li>경력 사항 1 입력</li><li>경력 사항 2 입력</li><li>경력 사항 3 입력</li></ul></article><article class="profile"><span class="number" aria-hidden="true">02</span><h3>이름 입력</h3><p class="role">직책 입력</p><h4>주요 경력</h4><ul><li>경력 사항 1 입력</li><li>경력 사항 2 입력</li><li>경력 사항 3 입력</li></ul></article></div></section></main>'''
+          page, count = re.subn(r'<main>.*?</main>', lambda _: main, source, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Partner main not found; nothing saved')
+          page = page.replace('<title>협력 업체 |', '<title>인사말 |', 1).replace('패스체대입시 인천송도센터 협력 업체 소개', '패스체대입시 인천송도센터 인사말과 두 사람의 경력 소개', 1).replace('</style>', css + '</style>', 1)
+          home_path = Path('index.html')
+          home = home_path.read_text(encoding='utf-8')
+          old = 'href="#about" aria-label="인사말 보기"'
+          if home.count(old) != 1:
+              raise SystemExit('Home greeting card not found exactly once; nothing saved')
+          page_path.write_text(page, encoding='utf-8')
+          home_path.write_text(home.replace(old, 'href="./greeting.html" aria-label="인사말 보기"', 1), encoding='utf-8')
+          PY
+      - name: Commit and push pages
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html greeting.html
+          git commit -m 'feat: publish greeting and two career profiles'
+          git push origin HEAD:main
