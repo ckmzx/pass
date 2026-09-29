@@ -1,0 +1,33 @@
+name: Link directions card
+on:
+  push:
+    paths:
+      - '.github/workflows/link-directions.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Link directions quick card
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          old = 'href="#result" aria-label="오시는 길 보기"'
+          new = 'href="https://naver.me/5ZJnyauB" target="_blank" rel="noopener noreferrer" aria-label="오시는 길 보기, 새 창"'
+          if html.count(old) != 1:
+              raise SystemExit('Directions card not found exactly once; no changes saved')
+          p.write_text(html.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit directions link
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: open Naver map from directions card'
+            git push origin HEAD:main
