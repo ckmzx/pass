@@ -1,0 +1,35 @@
+name: Animate subpage entry
+on:
+  push:
+    paths:
+      - '.github/workflows/animate-subpage-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  animate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Add upward entry animation to both subpages
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          css = '''@keyframes pass-subpage-enter{from{opacity:0;transform:translate3d(0,64px,0)}to{opacity:1;transform:translate3d(0,0,0)}}body>main{animation:pass-subpage-enter .48s cubic-bezier(.22,1,.36,1) both}@media(max-width:650px){body>main{animation-duration:.4s}}@media(prefers-reduced-motion:reduce){body>main{animation:none}}'''
+          updates = []
+          for filename in ('greeting.html', 'partners.html'):
+              p = Path(filename)
+              text = p.read_text(encoding='utf-8')
+              if text.count('</style>') != 1 or 'pass-subpage-enter' in text:
+                  raise SystemExit(filename + ': stylesheet missing or animation already exists')
+              updates.append((p, text.replace('</style>', css + '</style>', 1)))
+          for p, text in updates:
+              p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit entry animations
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html partners.html
+          git commit -m 'style: add upward slide entry to subpages'
+          git push origin HEAD:main
