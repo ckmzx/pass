@@ -1,0 +1,60 @@
+name: Migrate clean subpage URLs
+on:
+  push:
+    paths:
+      - '.github/workflows/migrate-clean-subpage-urls.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create directory pages and preserve old URL access
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          origin = 'https://www.xn--9t4b151a.kr'
+          updates = []
+          for slug in ('greeting', 'partners'):
+              old = Path(slug + '.html')
+              new = Path(slug) / 'index.html'
+              text = old.read_text(encoding='utf-8')
+              if new.exists() or text.count('</head>') != 1 or '<base' in text:
+                  raise SystemExit(slug + ': unexpected page structure')
+              text = re.sub(r'<link\b[^>]*rel="canonical"[^>]*>', '', text)
+              text = text.replace('<head>', '<head><base href="../">', 1)
+              for target in ('greeting', 'partners'):
+                  text = text.replace('./' + target + '.html', './' + target + '/')
+              text = text.replace('</head>', '<link rel="canonical" href="' + origin + '/' + slug + '/"></head>', 1)
+              redirect = '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>페이지 이동 | 패스체대입시</title><link rel="canonical" href="' + origin + '/' + slug + '/"><meta http-equiv="refresh" content="0;url=./' + slug + '/"></head><body><p>페이지 주소가 변경되었습니다. <a href="./' + slug + '/">새 페이지로 이동</a></p><script>location.replace("./' + slug + '/"+location.search+location.hash);</script></body></html>\n'
+              updates.extend(((new, text), (old, redirect)))
+          main = Path('index.html')
+          text = main.read_text(encoding='utf-8')
+          for slug in ('greeting', 'partners'):
+              old_link = './' + slug + '.html'
+              if old_link not in text:
+                  raise SystemExit(slug + ': main link missing')
+              text = text.replace(old_link, './' + slug + '/')
+          updates.append((main, text))
+          sitemap = Path('sitemap.xml')
+          xml = sitemap.read_text(encoding='utf-8')
+          for slug in ('greeting', 'partners'):
+              old_url = origin + '/' + slug + '.html'
+              if old_url not in xml:
+                  raise SystemExit(slug + ': sitemap URL missing')
+              xml = xml.replace(old_url, origin + '/' + slug + '/')
+          updates.append((sitemap, xml))
+          for p, content in updates:
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(content, encoding='utf-8')
+          PY
+      - name: Commit clean URLs
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting/index.html partners/index.html greeting.html partners.html index.html sitemap.xml
+          git commit -m 'feat: publish clean greeting and partners URLs'
+          git push origin HEAD:main
