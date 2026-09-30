@@ -1,0 +1,47 @@
+name: Refine quick card proportions
+on:
+  push:
+    paths:
+      - '.github/workflows/refine-quick-card-proportions.yml'
+permissions:
+  contents: write
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Adjust only quick card proportions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          marker = '/* quick-card-proportions-v1 */'
+          if marker in text or text.count('</style>') != 1:
+              raise SystemExit('Unexpected stylesheet structure; no changes written')
+          for token in ('quick-link--01', 'quick-icon', 'quick-name'):
+              if token not in text:
+                  raise SystemExit('Missing expected quick card: ' + token)
+          css = '''
+          /* quick-card-proportions-v1 */
+          .quick-grid .quick-link{min-height:108px;box-shadow:0 6px 14px rgba(8,27,54,.10)}
+          .quick-grid .quick-link .quick-name{font-size:20px}
+          .quick-grid .quick-link .quick-icon{flex-basis:39px;height:39px;border-radius:11px}
+          .quick-grid .quick-link .quick-icon svg{width:23px;height:23px}
+          .quick-grid .quick-link:hover{box-shadow:0 9px 18px rgba(8,27,54,.15)}
+          @media(max-width:780px){
+            .quick-grid .quick-link{min-height:94px}
+            .quick-grid .quick-link .quick-name{font-size:16px}
+            .quick-grid .quick-link .quick-icon{flex-basis:30px;height:30px;border-radius:9px}
+            .quick-grid .quick-link .quick-icon svg{width:18px;height:18px}
+          }
+          '''
+          p.write_text(text.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit updated card styling
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'style: compact quick cards with larger titles and softer shadows'
+          git push origin HEAD:main
