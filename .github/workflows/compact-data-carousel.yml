@@ -1,0 +1,35 @@
+name: Compact data section carousel
+on:
+  push:
+    paths:
+      - '.github/workflows/compact-data-carousel.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Resize data panel and overlay chevrons
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          previous = ('aria-label="이전 이미지">←</button>', 'aria-label="다음 이미지">→</button>')
+          replacement = ('aria-label="이전 이미지">‹</button>', 'aria-label="다음 이미지">›</button>')
+          if html.count('</style>') != 1 or any(html.count(x) != 1 for x in previous):
+              raise SystemExit('Expected data carousel not found exactly once')
+          css = '''@media(min-width:781px){#result .result-grid{grid-template-columns:minmax(250px,.72fr) minmax(0,1.55fr);align-items:start;gap:24px}#result .result-grid>.result{align-self:start;min-height:0;height:auto;padding:30px}#result .result-carousel{aspect-ratio:1.72;min-height:0;height:auto}}#result .result-carousel-track{inset:0}#result .result-slide img{width:100%;height:100%;padding:0;object-fit:cover;object-position:center}#result .result-carousel-controls{inset:0;justify-content:space-between;padding:0 12px;border:0;background:transparent;pointer-events:none}#result .result-carousel-controls button{width:44px;height:44px;border:1px solid rgba(255,255,255,.36);border-radius:50%;background:rgba(13,43,94,.52);color:#fff;font-size:29px;font-weight:400;line-height:1;box-shadow:0 6px 16px rgba(8,27,54,.16);backdrop-filter:blur(6px);pointer-events:auto}#result .result-carousel-controls button:hover{background:rgba(13,43,94,.72)}#result .result-carousel-count{bottom:10px}@media(max-width:780px){#result .result-grid{grid-template-columns:1fr;gap:18px}#result .result-carousel{aspect-ratio:1.5;min-height:0;height:auto}#result .result-carousel-controls button{width:38px;height:38px;font-size:26px}}'''
+          for old, new in zip(previous, replacement):
+              html = html.replace(old, new, 1)
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit data section layout
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'style: expand data carousel and overlay chevrons'
+          git push origin HEAD:main
