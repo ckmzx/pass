@@ -1,0 +1,46 @@
+name: Fit data carousel to image ratio
+on:
+  push:
+    paths:
+      - '.github/workflows/natural-data-carousel.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Size carousel from each original PNG
+        run: |
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          for n in (1, 2):
+              filename = f'datapic_0{n}.png'
+              with Path(filename).open('rb') as file:
+                  header = file.read(24)
+              if header[:8] != b'\x89PNG\r\n\x1a\n':
+                  raise SystemExit(filename + ': not a PNG')
+              width, height = struct.unpack('>II', header[16:24])
+              if not width or not height:
+                  raise SystemExit(filename + ': invalid dimensions')
+              old = f'<img src="./{filename}"'
+              new = f'<img width="{width}" height="{height}" src="./{filename}"'
+              if html.count(old) != 1:
+                  raise SystemExit(filename + ': expected one image tag')
+              html = html.replace(old, new, 1)
+          css = '''#result .result-carousel{aspect-ratio:auto;min-height:0;height:auto}#result .result-carousel-track{position:relative;inset:auto;height:auto}#result .result-slide{position:relative;inset:auto;display:none;min-height:0;height:auto;aspect-ratio:auto;margin:0;opacity:1;visibility:visible;transform:none;transition:none}#result .result-slide.is-active{display:block}#result .result-slide img{display:block;width:100%;height:auto;max-height:none;padding:0;object-fit:contain;object-position:center}'''
+          if html.count('</style>') != 1:
+              raise SystemExit('Expected stylesheet not found')
+          p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit uncropped carousel
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'fix: auto-size data slides without cropping'
+          git push origin HEAD:main
