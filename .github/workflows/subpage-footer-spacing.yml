@@ -1,0 +1,35 @@
+name: Space subpage footers
+on:
+  push:
+    paths:
+      - '.github/workflows/subpage-footer-spacing.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  space:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Increase partner closing and mobile footer spacing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          mobile = '@media(max-width:650px){footer .foot{display:flex;flex-direction:column;align-items:flex-start;gap:20px}footer .foot strong{line-height:1.5}footer .foot a{display:inline-flex;margin-top:0;padding:6px 0}}'
+          for name in ('partners.html', 'greeting.html'):
+              p = Path(name)
+              html = p.read_text(encoding='utf-8')
+              if html.count('</style>') != 1 or mobile in html:
+                  raise SystemExit(name + ': stylesheet missing or spacing already applied')
+              css = mobile
+              if name == 'partners.html':
+                  css = '.gallery.wrap{padding-top:28px;padding-bottom:92px}@media(max-width:540px){.gallery.wrap{padding-top:22px;padding-bottom:84px}}' + mobile
+              p.write_text(html.replace('</style>', css + '</style>', 1), encoding='utf-8')
+          PY
+      - name: Commit spacing updates
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add partners.html greeting.html
+          git commit -m 'style: space partner closing and mobile footer'
+          git push origin HEAD:main
