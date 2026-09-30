@@ -1,0 +1,95 @@
+name: Refine subpage motion and headers
+on:
+  push:
+    paths:
+      - '.github/workflows/refine-subpage-motion-header.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Rebuild matching headers and slow entrance
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          home = Path('index.html').read_text(encoding='utf-8')
+          home_css = re.search(r'<style[^>]*>(.*?)</style>', home, re.S).group(1)
+          header = re.search(r'<header>.*?</header>', home, re.S).group(0)
+          header = re.sub(r'href="#([^"]+)"', lambda m: 'href="./index.html#' + m.group(1) + '"', header)
+          def nav_selector(s):
+              return bool(re.search(r'(?<![\w-])(?:header|\.nav|\.brand|\.brand-logo|\.nav-links|\.nav-cta|\.menu)(?![\w-])', s))
+          def filter_css(css, mode):
+              out = []
+              pos = 0
+              while True:
+                  start = css.find('{', pos)
+                  if start < 0:
+                      break
+                  sel = css[pos:start].strip()
+                  end = start + 1
+                  depth = 1
+                  while end < len(css) and depth:
+                      depth += (css[end] == '{') - (css[end] == '}')
+                      end += 1
+                  if depth:
+                      raise SystemExit('Unbalanced stylesheet')
+                  body = css[start + 1:end - 1]
+                  if sel.startswith('@media'):
+                      nested = filter_css(body, mode)
+                      if nested:
+                          out.append(sel + '{' + nested + '}')
+                  elif sel.startswith('@'):
+                      if mode == 'keep':
+                          out.append(sel + '{' + body + '}')
+                  else:
+                      chosen = []
+                      for s in sel.split(','):
+                          s = s.strip()
+                          if mode == 'keep':
+                              if not nav_selector(s):
+                                  chosen.append(s)
+                          elif nav_selector(s):
+                              chosen.append(s if s.startswith('header') else 'header ' + s)
+                          elif s == '.wrap':
+                              chosen.append('header .wrap')
+                          elif s in ('body', 'a', 'button', '*'):
+                              chosen.append('header' if s == 'body' else 'header ' + s)
+                          elif s == ':root':
+                              chosen.append('header')
+                      if chosen:
+                          out.append(','.join(chosen) + '{' + body + '}')
+                  pos = end
+              return ''.join(out)
+          shared = filter_css(home_css, 'copy')
+          motion = '@keyframes pass-subpage-enter{from{opacity:0;transform:translate3d(0,100px,0)}to{opacity:1;transform:translate3d(0,0,0)}}body>main{animation:pass-subpage-enter 1s cubic-bezier(.25,.65,.3,1) both}@media(prefers-reduced-motion:reduce){body>main{animation:none}}'
+          font_links = re.findall(r'<link\b[^>]*rel="stylesheet"[^>]*>', home)
+          updates = []
+          for filename in ('greeting.html', 'partners.html'):
+              p = Path(filename)
+              page = p.read_text(encoding='utf-8')
+              match = re.search(r'<style[^>]*>(.*?)</style>', page, re.S)
+              if not match:
+                  raise SystemExit(filename + ': stylesheet missing')
+              css = filter_css(match.group(1), 'keep') + shared + motion
+              page = page[:match.start(1)] + css + page[match.end(1):]
+              page, count = re.subn(r'<header>.*?</header>', lambda m: header, page, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(filename + ': header missing')
+              for link in font_links:
+                  if link not in page:
+                      page = page.replace('</head>', link + '</head>', 1)
+              updates.append((p, page))
+          for p, page in updates:
+              p.write_text(page, encoding='utf-8')
+          PY
+      - name: Commit both subpages
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add greeting.html partners.html
+          git commit -m 'fix: match home header and slow page entrance'
+          git push origin HEAD:main
