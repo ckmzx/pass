@@ -1,0 +1,38 @@
+name: Fix videos share metadata
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-videos-share-meta.yml'
+permissions:
+  contents: write
+jobs:
+  fix-meta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Update only two sharing tags
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('videos/index.html')
+          text = p.read_text(encoding='utf-8')
+          replacements = {
+              '<meta property="og:url" content="https://www.패스.kr/videos/">': '<meta property="og:url" content="https://www.xn--9t4b151a.kr/videos/">',
+              '<meta property="og:image" content="https://www.패스.kr/og_image.png">': '<meta property="og:image" content="https://www.xn--9t4b151a.kr/og_image.png?v=20261002-1">'
+          }
+          if not Path('og_image.png').is_file():
+              raise SystemExit('OG image missing; no changes written')
+          for old in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit('Unexpected sharing tag; no changes written')
+          for old, new in replacements.items():
+              text = text.replace(old, new, 1)
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit sharing metadata
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add videos/index.html
+          git commit -m 'fix: use punycode and versioned OG image for videos sharing'
+          git push origin HEAD:main
